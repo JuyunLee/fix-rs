@@ -34,7 +34,11 @@ enum ExtractAttributeError {
     AttributeValueWrongType,
 }
 
-fn extract_attribute_value(ast: &syn::DeriveInput,field_ident: &'static str,attr_ident: &'static str) -> Result<syn::Lit,ExtractAttributeError> {
+fn extract_attribute_value(
+    ast: &syn::DeriveInput,
+    field_ident: &'static str,
+    attr_ident: &'static str,
+) -> Result<syn::Lit, ExtractAttributeError> {
     if let syn::Body::Struct(ref data) = ast.body {
         for field in data.fields() {
             if field.ident.as_ref().expect("Field must have an identifier") != field_ident {
@@ -46,10 +50,9 @@ fn extract_attribute_value(ast: &syn::DeriveInput,field_ident: &'static str,attr
                     continue;
                 }
 
-                if let syn::MetaItem::NameValue(_,ref lit) = attr.value {
+                if let syn::MetaItem::NameValue(_, ref lit) = attr.value {
                     return Ok(lit.clone());
-                }
-                else {
+                } else {
                     return Err(ExtractAttributeError::AttributeNotNameValue);
                 }
             }
@@ -63,27 +66,35 @@ fn extract_attribute_value(ast: &syn::DeriveInput,field_ident: &'static str,attr
     Err(ExtractAttributeError::BodyNotStruct)
 }
 
-fn extract_attribute_byte_str(ast: &syn::DeriveInput,field_ident: &'static str,attr_ident: &'static str) -> Result<Vec<u8>,ExtractAttributeError> {
-    let lit = try!(extract_attribute_value(ast,field_ident,attr_ident));
+fn extract_attribute_byte_str(
+    ast: &syn::DeriveInput,
+    field_ident: &'static str,
+    attr_ident: &'static str,
+) -> Result<Vec<u8>, ExtractAttributeError> {
+    let lit = try!(extract_attribute_value(ast, field_ident, attr_ident));
 
-    if let syn::Lit::ByteStr(ref bytes,_) = lit {
-       return Ok(bytes.clone());
+    if let syn::Lit::ByteStr(ref bytes, _) = lit {
+        return Ok(bytes.clone());
     }
 
     Err(ExtractAttributeError::AttributeValueWrongType)
 }
 
-fn extract_attribute_int(ast: &syn::DeriveInput,field_ident: &'static str,attr_ident: &'static str) -> Result<u64,ExtractAttributeError> {
-    let lit = try!(extract_attribute_value(ast,field_ident,attr_ident));
+fn extract_attribute_int(
+    ast: &syn::DeriveInput,
+    field_ident: &'static str,
+    attr_ident: &'static str,
+) -> Result<u64, ExtractAttributeError> {
+    let lit = try!(extract_attribute_value(ast, field_ident, attr_ident));
 
-    if let syn::Lit::Int(value,_) = lit {
-       return Ok(value);
+    if let syn::Lit::Int(value, _) = lit {
+        return Ok(value);
     }
 
     Err(ExtractAttributeError::AttributeValueWrongType)
 }
 
-#[proc_macro_derive(BuildMessage,attributes(message_type))]
+#[proc_macro_derive(BuildMessage, attributes(message_type))]
 pub fn build_message(input: TokenStream) -> TokenStream {
     let source = input.to_string();
     let ast = syn::parse_derive_input(&source[..]).unwrap();
@@ -223,18 +234,26 @@ pub fn build_message(input: TokenStream) -> TokenStream {
     result.parse().unwrap()
 }
 
-#[proc_macro_derive(BuildField,attributes(tag))]
+#[proc_macro_derive(BuildField, attributes(tag))]
 pub fn build_field(input: TokenStream) -> TokenStream {
     let source = input.to_string();
     let ast = syn::parse_derive_input(&source[..]).unwrap();
 
-    let tag = match extract_attribute_int(&ast,"_tag_gen","tag") {
+    let tag = match extract_attribute_int(&ast, "_tag_gen", "tag") {
         Ok(bytes) => bytes,
-        Err(ExtractAttributeError::BodyNotStruct) => panic!("#[derive(BuildField)] can only be used with structs"),
-        Err(ExtractAttributeError::FieldNotFound) => panic!("#[derive(BuildField)] requires a _tag_gen field to be specified"),
-        Err(ExtractAttributeError::AttributeNotFound) => panic!("#[derive(BuildField)] requires the _tag_gen field to have the tag attribute"),
-        Err(ExtractAttributeError::AttributeNotNameValue) |
-        Err(ExtractAttributeError::AttributeValueWrongType) => panic!("#[derive(BuildField)] tag attribute must be as an unsigned integer like #[tag=1234]"),
+        Err(ExtractAttributeError::BodyNotStruct) => {
+            panic!("#[derive(BuildField)] can only be used with structs")
+        }
+        Err(ExtractAttributeError::FieldNotFound) => {
+            panic!("#[derive(BuildField)] requires a _tag_gen field to be specified")
+        }
+        Err(ExtractAttributeError::AttributeNotFound) => {
+            panic!("#[derive(BuildField)] requires the _tag_gen field to have the tag attribute")
+        }
+        Err(ExtractAttributeError::AttributeNotNameValue)
+        | Err(ExtractAttributeError::AttributeValueWrongType) => panic!(
+            "#[derive(BuildField)] tag attribute must be as an unsigned integer like #[tag=1234]"
+        ),
     };
     let tag = tag.to_string();
 
@@ -259,4 +278,3 @@ pub fn build_field(input: TokenStream) -> TokenStream {
     };
     tokens.parse().unwrap()
 }
-
