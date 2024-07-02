@@ -605,7 +605,7 @@ impl FieldType for DayOfMonthFieldType {
     }
 
     fn set_value(field: &mut Self::Type, bytes: &[u8]) -> Result<(), SetValueError> {
-        let new_value = try!(slice_to_int::<u8>(bytes));
+        let new_value = slice_to_int::<u8>(bytes)?;
         if new_value < 1 || new_value > 31 {
             return Err(SetValueError::OutOfRange);
         }
@@ -650,7 +650,7 @@ impl FieldType for IntFieldType {
     }
 
     fn set_value(field: &mut Self::Type, bytes: &[u8]) -> Result<(), SetValueError> {
-        *field = try!(slice_to_int::<Self::Type>(bytes));
+        *field = slice_to_int::<Self::Type>(bytes)?;
 
         Ok(())
     }
@@ -703,9 +703,9 @@ impl FieldType for LocalMktDateFieldType {
             return Err(SetValueError::WrongFormat);
         }
 
-        let year = try!(slice_to_int::<i32>(&bytes[0..4]));
-        let month = try!(slice_to_int::<u32>(&bytes[4..6]));
-        let day = try!(slice_to_int::<u32>(&bytes[6..8]));
+        let year = slice_to_int::<i32>(&bytes[0..4])?;
+        let month = slice_to_int::<u32>(&bytes[4..6])?;
+        let day = slice_to_int::<u32>(&bytes[6..8])?;
 
         *field = NaiveDate::from_ymd(year, month, day);
 
@@ -922,7 +922,7 @@ impl FieldType for SeqNumFieldType {
     }
 
     fn set_value(field: &mut Self::Type, bytes: &[u8]) -> Result<(), SetValueError> {
-        *field = try!(slice_to_int::<Self::Type>(bytes));
+        *field = slice_to_int::<Self::Type>(bytes)?;
 
         Ok(())
     }
@@ -1070,9 +1070,9 @@ impl FieldType for UTCTimeOnlyFieldType {
             return Err(SetValueError::WrongFormat);
         }
 
-        let hours = try!(slice_to_int::<u32>(&bytes[0..2]));
-        let minutes = try!(slice_to_int::<u32>(&bytes[3..5]));
-        let seconds = try!(slice_to_int::<u32>(&bytes[6..8]));
+        let hours = slice_to_int::<u32>(&bytes[0..2])?;
+        let minutes = slice_to_int::<u32>(&bytes[3..5])?;
+        let seconds = slice_to_int::<u32>(&bytes[6..8])?;
         let milliseconds = if bytes.len() == 8 {
             0
         } else if bytes.len() == 12 {
@@ -1080,7 +1080,7 @@ impl FieldType for UTCTimeOnlyFieldType {
                 return Err(SetValueError::WrongFormat);
             }
 
-            try!(slice_to_int::<u32>(&bytes[9..12]))
+            slice_to_int::<u32>(&bytes[9..12])?
         } else {
             return Err(SetValueError::WrongFormat);
         };
@@ -1143,12 +1143,12 @@ impl FieldType for UTCTimestampFieldType {
             return Err(SetValueError::WrongFormat);
         }
 
-        let year = try!(slice_to_int::<i32>(&bytes[0..4]));
-        let month = try!(slice_to_int::<u32>(&bytes[4..6]));
-        let day = try!(slice_to_int::<u32>(&bytes[6..8]));
-        let hours = try!(slice_to_int::<u32>(&bytes[9..11]));
-        let minutes = try!(slice_to_int::<u32>(&bytes[12..14]));
-        let seconds = try!(slice_to_int::<u32>(&bytes[15..17]));
+        let year = slice_to_int::<i32>(&bytes[0..4])?;
+        let month = slice_to_int::<u32>(&bytes[4..6])?;
+        let day = slice_to_int::<u32>(&bytes[6..8])?;
+        let hours = slice_to_int::<u32>(&bytes[9..11])?;
+        let minutes = slice_to_int::<u32>(&bytes[12..14])?;
+        let seconds = slice_to_int::<u32>(&bytes[15..17])?;
         let milliseconds = if bytes.len() == 17 {
             0
         } else if bytes.len() == 21 {
@@ -1156,7 +1156,7 @@ impl FieldType for UTCTimestampFieldType {
                 return Err(SetValueError::WrongFormat);
             }
 
-            try!(slice_to_int::<u32>(&bytes[18..21]))
+            slice_to_int::<u32>(&bytes[18..21])?
         } else {
             return Err(SetValueError::WrongFormat);
         };

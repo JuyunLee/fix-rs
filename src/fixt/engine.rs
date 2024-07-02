@@ -243,23 +243,23 @@ impl Engine {
         message_dictionary: HashMap<&'static [u8], Box<dyn BuildFIXTMessage + Send>>,
         max_message_size: u64,
     ) -> Result<Engine, io::Error> {
-        let engine_poll = try!(Poll::new());
+        let engine_poll = Poll::new()?;
         let (thread_to_engine_tx, thread_to_engine_rx) = channel::<EngineEvent>();
-        try!(engine_poll.register(
+        engine_poll.register(
             &thread_to_engine_rx,
             ENGINE_EVENT_TOKEN,
             Ready::readable(),
-            PollOpt::level()
-        ));
+            PollOpt::level(),
+        )?;
 
-        let poll = try!(Poll::new());
+        let poll = Poll::new()?;
         let (engine_to_thread_tx, engine_to_thread_rx) = channel::<InternalEngineToThreadEvent>();
-        try!(poll.register(
+        poll.register(
             &engine_to_thread_rx,
             INTERNAL_ENGINE_EVENT_TOKEN,
             Ready::readable(),
-            PollOpt::level()
-        ));
+            PollOpt::level(),
+        )?;
 
         let token_generator = Arc::new(Mutex::new(TokenGenerator::new(
             BASE_CONNECTION_TOKEN.0,
@@ -339,7 +339,7 @@ impl Engine {
             Some(address) => address,
             None => return Ok(None),
         };
-        let listener = try!(TcpListener::bind(&address));
+        let listener = TcpListener::bind(&address)?;
 
         let token = match self.token_generator.lock().unwrap().create() {
             Some(token) => token,

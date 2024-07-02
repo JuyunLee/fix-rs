@@ -287,8 +287,8 @@ impl Connection {
         logon_message.default_appl_ver_id = MessageVersion::FIX50SP2;
         logon_message.username = b"some_user".to_vec();
         logon_message.password = b"some_password".to_vec();
-        try!(connection.send_message(logon_message));
-        try!(connection.recv_message::<Logon>().map(|_| ()));
+        connection.send_message(logon_message)?;
+        connection.recv_message::<Logon>().map(|_| ())?;
 
         Ok(connection)
     }
@@ -435,7 +435,7 @@ impl Connection {
     }
 
     fn recv_message<T: FIXTMessage + Any + Clone>(&mut self) -> Result<T, io::Error> {
-        let fixt_message = try!(self.recv_fixt_message());
+        let fixt_message = self.recv_fixt_message())?
         Ok(fixt_message
             .as_any()
             .downcast_ref::<T>()
@@ -537,7 +537,7 @@ fn test_request_load() -> Result<(), io::Error> {
         };
         MESSAGE_COUNT as usize
     ];
-    let mut connection = try!(Connection::connect_and_logon(build_dictionary()));
+    let mut connection = Connection::connect_and_logon(build_dictionary())?;
 
     //Send TestRequest messages with a priority on sending over receiving. Then measure how long it
     //takes to get a response for each.
@@ -553,15 +553,15 @@ fn test_request_load() -> Result<(), io::Error> {
         for event in events.iter() {
             let readiness = event.readiness();
             if readiness.is_writable() {
-                try!(connection.send_all_messages(&mut iter, |ref message| {
+                connection.send_all_messages(&mut iter, |ref message| {
                     //TODO: Maybe check the test_req_id instead to be more general?
                     latency_results[message.msg_seq_num() as usize - 2].begin_send_time =
                         Instant::now();
-                }));
+                })?;
             }
 
             if readiness.is_readable() {
-                try!(connection.recv_all_messages(|ref message| {
+                connection.recv_all_messages(|ref message| {
                     latency_results[message.msg_seq_num() as usize - 2].end_parse_time =
                         Instant::now();
 
@@ -569,7 +569,7 @@ fn test_request_load() -> Result<(), io::Error> {
                     if message.msg_seq_num() >= MESSAGE_COUNT + 1 {
                         running = false;
                     }
-                }));
+                })?;
             }
 
             let readiness = UnixReady::from(readiness);
@@ -596,7 +596,7 @@ fn test_request_latency() -> Result<(), io::Error> {
         };
         MESSAGE_COUNT as usize
     ];
-    let mut connection = try!(Connection::connect_and_logon(build_dictionary()));
+    let mut connection = Connection::connect_and_logon(build_dictionary())?;
 
     //Send TestRequest messages with a priority on receiving over sending. Then measure how long it
     //takes to get a response for each.
@@ -612,7 +612,7 @@ fn test_request_latency() -> Result<(), io::Error> {
         for event in events.iter() {
             let readiness = event.readiness();
             if readiness.is_readable() {
-                try!(connection.recv_all_messages(|ref message| {
+                connection.recv_all_messages(|ref message| {
                     latency_results[message.msg_seq_num() as usize - 2].end_parse_time =
                         Instant::now();
 
@@ -620,7 +620,7 @@ fn test_request_latency() -> Result<(), io::Error> {
                     if message.msg_seq_num() >= MESSAGE_COUNT + 1 {
                         running = false;
                     }
-                }));
+                })?;
             }
 
             let readiness = UnixReady::from(readiness);
@@ -628,11 +628,11 @@ fn test_request_latency() -> Result<(), io::Error> {
                 panic!("Other side closed connection");
             }
 
-            try!(connection.send_next_message(&mut iter, |ref message| {
+            connection.send_next_message(&mut iter, |ref message| {
                 //TODO: Maybe check the test_req_id instead to be more general?
                 latency_results[message.msg_seq_num() as usize - 2].begin_send_time =
                     Instant::now();
-            }));
+            })?;
         }
     }
 

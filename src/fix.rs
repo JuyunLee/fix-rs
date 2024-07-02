@@ -663,7 +663,7 @@ impl Parser {
             }
 
             let c = message_bytes[*index];
-            try!(self.update_book_keeping(c));
+            self.update_book_keeping(c)?;
 
             self.current_bytes.push(c);
 
@@ -769,7 +769,7 @@ impl Parser {
 
         //Make sure that iff the body of the message has already been read, this is the
         //checksum tag.
-        try!(self.if_checksum_then_is_last_tag());
+        self.if_checksum_then_is_last_tag()?;
 
         //If there is some tag ordering in effect, make sure this is the expected tag to
         //follow the previous tag.
@@ -785,7 +785,7 @@ impl Parser {
                     //Fast track to read in the specified number of bytes.
                     self.fast_track_bytes_remaining = byte_count;
                     *index += 1;
-                    try!(self.fast_track_read_bytes(index, &message_bytes));
+                    self.fast_track_read_bytes(index, &message_bytes)?;
                     *index -= 1;
                 }
                 TagRuleMode::RepeatingGroupStart(first_repeating_group_tag) => {
@@ -886,7 +886,7 @@ impl Parser {
             //handling that must be put off until after receiving the sixth field.
             self.message_type = self.current_bytes.clone();
             if self.fix_version != FIXVersion::FIXT_1_1 {
-                try!(self.prepare_for_message());
+                self.prepare_for_message()?;
             }
         } else if self.found_tag_count == 3 && self.fix_version == FIXVersion::FIXT_1_1 {
             //FIXT.1.1 requires the fourth field to be SenderCompID. Older FIX versions use generic
@@ -932,40 +932,40 @@ impl Parser {
 
                 //Now that the message version has been determined, prepare a collection of which
                 //fields are supported and which are required.
-                try!(self.prepare_for_message());
+                self.prepare_for_message()?;
 
                 //Start the message by filling out the SenderCompID and TargetCompID portions of
                 //message. These fields are always required for FIXT.1.1 messages.
-                try!(set_message_value(
+                set_message_value(
                     &mut *self.current_message,
                     SenderCompID::tag(),
-                    &self.sender_comp_id[..]
-                ));
+                    &self.sender_comp_id[..],
+                )?;
                 self.remaining_fields.remove(&SenderCompID::tag());
                 self.remaining_required_fields.remove(&SenderCompID::tag());
-                try!(set_message_value(
+                set_message_value(
                     &mut *self.current_message,
                     TargetCompID::tag(),
-                    &self.target_comp_id[..]
-                ));
+                    &self.target_comp_id[..],
+                )?;
                 self.remaining_fields.remove(&TargetCompID::tag());
                 self.remaining_required_fields.remove(&TargetCompID::tag());
 
                 //Mark ApplVerID as found so we produce an error if it's encountered anywhere else
                 //in the message.
                 if self.current_tag == ApplVerID::tag() {
-                    try!(set_message_value(
+                    set_message_value(
                         &mut *self.current_message,
                         ApplVerID::tag(),
-                        &self.current_bytes[..]
-                    ));
+                        &self.current_bytes[..],
+                    )?;
                 }
                 self.remaining_fields.remove(&ApplVerID::tag());
             }
 
             //Make sure checksum checks out when done reading a message.
             let is_message_end = if self.current_tag == CHECKSUM_TAG {
-                try!(self.validate_checksum());
+                self.validate_checksum()?;
                 true
             } else {
                 false
@@ -1017,11 +1017,11 @@ impl Parser {
                                 }
                                 //Ignore begin group tags, they will be handled below.
                                 else {
-                                    try!(set_message_value(
+                                    set_message_value(
                                         &mut *group.message,
                                         self.current_tag,
-                                        &self.current_bytes[..]
-                                    ));
+                                        &self.current_bytes[..],
+                                    )?;
                                 }
 
                                 //Save rule to handle later.
@@ -1061,7 +1061,7 @@ impl Parser {
 
                 //Out of the way result handling to appease the borrow checker.
                 if let Some(rule) = some_rule {
-                    try!(self.handle_rule_after_value(&rule));
+                    self.handle_rule_after_value(&rule)?;
                 }
                 if group_end {
                     //Put repeated group into next highest repeating group. If there are no
@@ -1082,7 +1082,7 @@ impl Parser {
                 //encountered. As a side effect, we also handle any tag specific
                 //rules in consequence of being encountered.
                 if let Some(rule) = self.remaining_fields.remove(&self.current_tag) {
-                    skip_set_value = try!(self.handle_rule_after_value(&rule));
+                    skip_set_value = self.handle_rule_after_value(&rule)?;
                 } else {
                     if self.is_current_tag_known() {
                         let current_message_builder = self
@@ -1111,11 +1111,11 @@ impl Parser {
             }
 
             if !is_message_end && !tag_in_group && !skip_set_value {
-                try!(set_message_value(
+                set_message_value(
                     &mut *self.current_message,
                     self.current_tag,
-                    &self.current_bytes[..]
-                ));
+                    &self.current_bytes[..],
+                )?;
             }
 
             if is_message_end {
@@ -1226,21 +1226,21 @@ impl Parser {
         self.scan_for_message(index, message_bytes);
 
         //Resume loading any bytes using the fast track if we ran out in the last call.
-        try!(self.fast_track_read_bytes(index, &message_bytes));
+        self.fast_track_read_bytes(index, &message_bytes)?;
 
         //Parse each byte in the message one by one.
         while *index < message_bytes.len() {
             let c = message_bytes[*index];
 
             //Perform basic checksum and body length updates.
-            try!(self.update_book_keeping(c));
+            self.update_book_keeping(c)?;
 
             //Check if this byte indicates a new tag=value, the end of a tag, part of a tag, or part of
             //a value.
             match c {
                 //Byte indicates a tag has finished being read.
                 b'=' if self.current_tag.is_empty() => {
-                    try!(self.match_tag_end(index, message_bytes));
+                    self.match_tag_end(index, message_bytes)?;
                 }
                 //Byte indicates a vale has finished being read. Now both the tag and value are known.
                 b'\x01' => {
