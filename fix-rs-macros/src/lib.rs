@@ -71,7 +71,7 @@ fn extract_attribute_byte_str(
     field_ident: &'static str,
     attr_ident: &'static str,
 ) -> Result<Vec<u8>, ExtractAttributeError> {
-    let lit = try!(extract_attribute_value(ast, field_ident, attr_ident));
+    let lit = extract_attribute_value(ast, field_ident, attr_ident)?;
 
     if let syn::Lit::ByteStr(ref bytes, _) = lit {
         return Ok(bytes.clone());
@@ -85,7 +85,7 @@ fn extract_attribute_int(
     field_ident: &'static str,
     attr_ident: &'static str,
 ) -> Result<u64, ExtractAttributeError> {
-    let lit = try!(extract_attribute_value(ast, field_ident, attr_ident));
+    let lit = extract_attribute_value(ast, field_ident, attr_ident)?;
 
     if let syn::Lit::Int(value, _) = lit {
         return Ok(value);
