@@ -123,10 +123,10 @@ pub enum EngineEvent {
     SessionEstablished(Connection), //Connection completed logon process successfully.
     ListenerFailed(Listener, io::Error), //Could not setup listener.
     ListenerAcceptFailed(Listener, io::Error), //Could not accept a connection with listener.
-    MessageReceived(Connection, Box<FIXTMessage + Send>), //New valid message was received.
+    MessageReceived(Connection, Box<dyn FIXTMessage + Send>), //New valid message was received.
     MessageReceivedGarbled(Connection, ParseError), //New message could not be parsed correctly. (If not garbled (FIXT 1.1, page 40), a Reject will be issued first)
-    MessageReceivedDuplicate(Connection, Box<FIXTMessage + Send>), //Message with MsgSeqNum already seen was received.
-    MessageRejected(Connection, Box<FIXTMessage + Send>), //New message breaks session rules and was rejected.
+    MessageReceivedDuplicate(Connection, Box<dyn FIXTMessage + Send>), //Message with MsgSeqNum already seen was received.
+    MessageRejected(Connection, Box<dyn FIXTMessage + Send>), //New message breaks session rules and was rejected.
     ResendRequested(Connection, Range<u64>), //Range of messages by MsgSeqNum that are requested to be resent. [Range::start,Range::end)
     SequenceResetResetHasNoEffect(Connection),
     SequenceResetResetInThePast(Connection),
@@ -218,7 +218,7 @@ impl fmt::Debug for EngineEvent {
 }
 
 pub enum ResendResponse {
-    Message(Option<MessageVersion>, Box<FIXTMessage + Send>),
+    Message(Option<MessageVersion>, Box<dyn FIXTMessage + Send>),
     Gap(Range<u64>),
 }
 
@@ -240,7 +240,7 @@ pub struct Engine {
 
 impl Engine {
     pub fn new(
-        message_dictionary: HashMap<&'static [u8], Box<BuildFIXTMessage + Send>>,
+        message_dictionary: HashMap<&'static [u8], Box<dyn BuildFIXTMessage + Send>>,
         max_message_size: u64,
     ) -> Result<Engine, io::Error> {
         let engine_poll = try!(Poll::new());
@@ -367,7 +367,11 @@ impl Engine {
         self.send_message_box(connection, message);
     }
 
-    pub fn send_message_box(&mut self, connection: Connection, message: Box<FIXTMessage + Send>) {
+    pub fn send_message_box(
+        &mut self,
+        connection: Connection,
+        message: Box<dyn FIXTMessage + Send>,
+    ) {
         self.send_message_box_with_message_version(connection, None, message);
     }
 
@@ -375,7 +379,7 @@ impl Engine {
         &mut self,
         connection: Connection,
         message_version: MV,
-        message: Box<FIXTMessage + Send>,
+        message: Box<dyn FIXTMessage + Send>,
     ) {
         self.tx
             .send(InternalEngineToThreadEvent::SendMessage(

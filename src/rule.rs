@@ -19,7 +19,7 @@ use message::BuildMessage;
 pub enum Rule {
     Nothing,
     BeginGroup {
-        builder_func: fn() -> Box<BuildMessage + Send>,
+        builder_func: fn() -> Box<dyn BuildMessage + Send>,
     },
     PrepareForBytes {
         bytes_tag: FieldTag,

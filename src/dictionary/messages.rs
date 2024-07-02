@@ -40,19 +40,19 @@ impl Message for NullMessage {
         unimplemented!();
     }
 
-    fn set_groups(&mut self, _key: FieldTag, _group: Vec<Box<Message>>) -> bool {
+    fn set_groups(&mut self, _key: FieldTag, _group: Vec<Box<dyn Message>>) -> bool {
         unimplemented!();
     }
 
-    fn as_any(&self) -> &Any {
+    fn as_any(&self) -> &dyn Any {
         unimplemented!();
     }
 
-    fn as_any_mut(&mut self) -> &mut Any {
+    fn as_any_mut(&mut self) -> &mut dyn Any {
         unimplemented!();
     }
 
-    fn new_into_box(&self) -> Box<Message + Send> {
+    fn new_into_box(&self) -> Box<dyn Message + Send> {
         unimplemented!();
     }
 
@@ -71,7 +71,7 @@ impl Message for NullMessage {
 }
 
 impl FIXTMessage for NullMessage {
-    fn new_into_box(&self) -> Box<FIXTMessage + Send> {
+    fn new_into_box(&self) -> Box<dyn FIXTMessage + Send> {
         unimplemented!();
     }
 

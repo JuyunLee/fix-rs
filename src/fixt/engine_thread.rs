@@ -215,7 +215,7 @@ enum TimeoutType {
 type MsgSeqNumType = <<MsgSeqNum as Field>::Type as FieldType>::Type;
 
 struct OutboundMessage {
-    message: Box<FIXTMessage + Send>,
+    message: Box<dyn FIXTMessage + Send>,
     message_version: Option<MessageVersion>,
     auto_msg_seq_num: bool,
 }
@@ -237,7 +237,7 @@ impl OutboundMessage {
         }
     }
 
-    fn from_box(message: Box<FIXTMessage + Send>) -> Self {
+    fn from_box(message: Box<dyn FIXTMessage + Send>) -> Self {
         OutboundMessage {
             message: message,
             message_version: None,
@@ -308,7 +308,7 @@ pub enum InternalEngineToThreadEvent {
         <<SenderCompID as Field>::Type as FieldType>::Type,
         TcpListener,
     ),
-    SendMessage(Token, Option<MessageVersion>, Box<FIXTMessage + Send>),
+    SendMessage(Token, Option<MessageVersion>, Box<dyn FIXTMessage + Send>),
     ResendMessages(Token, Vec<ResendResponse>),
     ApproveNewConnection(Connection, Box<Logon>, u64),
     RejectNewConnection(Connection, Option<Vec<u8>>),
@@ -330,7 +330,7 @@ enum ConnectionEventError {
 }
 
 enum ConnectionReadMessage {
-    Message(Box<FIXTMessage + Send>),
+    Message(Box<dyn FIXTMessage + Send>),
     Error(ParseError),
 }
 
@@ -367,7 +367,7 @@ struct InternalConnection {
 
 impl InternalConnection {
     fn new(
-        message_dictionary: HashMap<&'static [u8], Box<BuildFIXTMessage + Send>>,
+        message_dictionary: HashMap<&'static [u8], Box<dyn BuildFIXTMessage + Send>>,
         max_message_size: u64,
         fix_version: FIXVersion,
         default_message_version: MessageVersion,
@@ -810,7 +810,7 @@ struct InternalThread {
     token_generator: Arc<Mutex<TokenGenerator>>,
     tx: Sender<EngineEvent>,
     rx: Receiver<InternalEngineToThreadEvent>,
-    message_dictionary: HashMap<&'static [u8], Box<BuildFIXTMessage + Send>>,
+    message_dictionary: HashMap<&'static [u8], Box<dyn BuildFIXTMessage + Send>>,
     max_message_size: u64,
     connections: HashMap<Token, InternalConnection>,
     listeners: HashMap<Token, InternalListener>,
@@ -1433,7 +1433,7 @@ impl InternalThread {
 
     fn on_network_message(
         connection: &mut InternalConnection,
-        mut message: Box<FIXTMessage + Send>,
+        mut message: Box<dyn FIXTMessage + Send>,
         tx: &Sender<EngineEvent>,
         timer: &mut Timer<(TimeoutType, Token)>,
     ) -> Result<(), ConnectionTerminatedReason> {
@@ -1442,11 +1442,11 @@ impl InternalThread {
 
         fn if_on_resend_request(
             connection: &mut InternalConnection,
-            message: Box<FIXTMessage + Send>,
+            message: Box<dyn FIXTMessage + Send>,
             msg_seq_num: MsgSeqNumType,
             tx: &Sender<EngineEvent>,
             timer: &mut Timer<(TimeoutType, Token)>,
-        ) -> Option<Box<FIXTMessage + Send>> {
+        ) -> Option<Box<dyn FIXTMessage + Send>> {
             let mut rejected = false;
 
             if let Some(resend_request) = message.as_any().downcast_ref::<ResendRequest>() {
@@ -1556,7 +1556,7 @@ impl InternalThread {
 
         fn reject_for_sending_time_accuracy(
             connection: &mut InternalConnection,
-            message: Box<FIXTMessage + Send>,
+            message: Box<dyn FIXTMessage + Send>,
             msg_seq_num: MsgSeqNumType,
             tx: &Sender<EngineEvent>,
         ) {
@@ -1577,11 +1577,11 @@ impl InternalThread {
 
         fn on_greater_than_expected_msg_seq_num(
             connection: &mut InternalConnection,
-            mut message: Box<FIXTMessage + Send>,
+            mut message: Box<dyn FIXTMessage + Send>,
             msg_seq_num: MsgSeqNumType,
             tx: &Sender<EngineEvent>,
             timer: &mut Timer<(TimeoutType, Token)>,
-        ) -> Option<Box<FIXTMessage + Send>> {
+        ) -> Option<Box<dyn FIXTMessage + Send>> {
             //FIXT v1.1, page 13: We should reply to ResendRequest first when MsgSeqNum is higher
             //than expected. Afterwards, we should send our own ResendRequest.
             message = match if_on_resend_request(connection, message, msg_seq_num, tx, timer) {
@@ -1680,7 +1680,7 @@ impl InternalThread {
 
         fn on_less_than_expected_msg_seq_num(
             connection: &mut InternalConnection,
-            message: Box<FIXTMessage + Send>,
+            message: Box<dyn FIXTMessage + Send>,
             msg_seq_num: MsgSeqNumType,
             tx: &Sender<EngineEvent>,
             timer: &mut Timer<(TimeoutType, Token)>,
@@ -1719,11 +1719,11 @@ impl InternalThread {
 
         fn on_expected_msg_seq_num(
             connection: &mut InternalConnection,
-            mut message: Box<FIXTMessage + Send>,
+            mut message: Box<dyn FIXTMessage + Send>,
             msg_seq_num: MsgSeqNumType,
             tx: &Sender<EngineEvent>,
             timer: &mut Timer<(TimeoutType, Token)>,
-        ) -> Result<Option<Box<FIXTMessage + Send>>, ConnectionTerminatedReason> {
+        ) -> Result<Option<Box<dyn FIXTMessage + Send>>, ConnectionTerminatedReason> {
             //Start by incrementing expected inbound MsgSeqNum since the message is at least
             //formatted correctly and matches the expected MsgSeqNum.
             try!(connection.increment_inbound_msg_seq_num());
@@ -2392,7 +2392,7 @@ pub fn internal_engine_thread(
     token_generator: Arc<Mutex<TokenGenerator>>,
     tx: Sender<EngineEvent>,
     rx: Receiver<InternalEngineToThreadEvent>,
-    message_dictionary: HashMap<&'static [u8], Box<BuildFIXTMessage + Send>>,
+    message_dictionary: HashMap<&'static [u8], Box<dyn BuildFIXTMessage + Send>>,
     max_message_size: u64,
 ) {
     //TODO: There should probably be a mechanism to log every possible message, even those we

@@ -1001,7 +1001,7 @@ impl<T: Message + MessageBuildable + Any + Clone + Default + PartialEq + Send + 
         Default::default()
     }
 
-    fn set_groups(field: &mut Self::Type, mut groups: Vec<Box<Message>>) -> bool {
+    fn set_groups(field: &mut Self::Type, mut groups: Vec<Box<dyn Message>>) -> bool {
         field.clear();
 
         for group in groups.drain(0..) {

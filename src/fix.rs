@@ -46,8 +46,8 @@ const CHECKSUM_TAG_BYTES: &'static [u8] = b"10";
 const CHECKSUM_TAG: FieldTag = FieldTag(10);
 
 pub enum ParseError {
-    MissingRequiredTag(FieldTag, Box<FIXTMessage + Send>), //Required tag was not included in message.
-    MissingConditionallyRequiredTag(FieldTag, Box<FIXTMessage + Send>), //Conditionally required tag was not included in message.
+    MissingRequiredTag(FieldTag, Box<dyn FIXTMessage + Send>), //Required tag was not included in message.
+    MissingConditionallyRequiredTag(FieldTag, Box<dyn FIXTMessage + Send>), //Conditionally required tag was not included in message.
     BeginStrNotFirstTag,
     BodyLengthNotSecondTag,
     BodyLengthNotNumber,
@@ -152,13 +152,13 @@ impl fmt::Debug for ParseError {
 struct ParseGroupState {
     remaining_fields: FieldHashMap,
     remaining_required_fields: FieldHashSet,
-    message: Box<Message>,
+    message: Box<dyn Message>,
 }
 
 struct ParseRepeatingGroupState {
     number_of_tag: FieldTag,
     group_count: usize,
-    group_builder: Box<BuildMessage>,
+    group_builder: Box<dyn BuildMessage>,
     first_tag: FieldTag,
     groups: Vec<ParseGroupState>,
 }
@@ -252,7 +252,7 @@ fn set_message_value<T: Message + ?Sized>(
 }
 
 pub struct Parser {
-    message_dictionary: HashMap<&'static [u8], Box<BuildFIXTMessage + Send>>,
+    message_dictionary: HashMap<&'static [u8], Box<dyn BuildFIXTMessage + Send>>,
     max_message_length: u64,
     default_message_version: MessageVersion,
     default_message_type_version: HashMap<&'static [u8], MessageVersion>,
@@ -277,13 +277,13 @@ pub struct Parser {
     remaining_required_fields: FieldHashSet,
     missing_tag: FieldTag,
     missing_conditional_tag: FieldTag,
-    current_message: Box<FIXTMessage + Send>,
-    pub messages: Vec<Box<FIXTMessage + Send>>,
+    current_message: Box<dyn FIXTMessage + Send>,
+    pub messages: Vec<Box<dyn FIXTMessage + Send>>,
 }
 
 impl Parser {
     pub fn new(
-        message_dictionary: HashMap<&'static [u8], Box<BuildFIXTMessage + Send>>,
+        message_dictionary: HashMap<&'static [u8], Box<dyn BuildFIXTMessage + Send>>,
         max_message_length: u64,
     ) -> Parser {
         //Perform a sanity check to make sure message dictionary was defined correctly. For now,
@@ -406,7 +406,7 @@ impl Parser {
     }
 
     pub fn validate_message_dictionary(
-        message_dictionary: &HashMap<&'static [u8], Box<BuildFIXTMessage + Send>>,
+        message_dictionary: &HashMap<&'static [u8], Box<dyn BuildFIXTMessage + Send>>,
     ) {
         enum MessageType {
             Standard,
