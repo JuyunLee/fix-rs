@@ -13,17 +13,16 @@
 #![recursion_limit = "256"]
 
 extern crate proc_macro;
+extern crate proc_macro2;
 #[macro_use]
 extern crate quote;
 extern crate syn;
 
-use proc_macro::TokenStream;
-use quote::Tokens;
+use proc_macro2::TokenStream;
+use std::str::FromStr;
 
-fn str_to_tokens(input: &str) -> Tokens {
-    let mut tokens = Tokens::new();
-    tokens.append(input);
-    tokens
+fn str_to_tokens(input: &str) -> TokenStream {
+    TokenStream::from_str(input).expect("failed to convert str to tokens")
 }
 
 enum ExtractAttributeError {
@@ -37,21 +36,19 @@ enum ExtractAttributeError {
 fn extract_attribute_value(
     ast: &syn::DeriveInput,
     field_ident: &'static str,
-    attr_ident: &'static str,
+    _attr_ident: &'static str,
 ) -> Result<syn::Lit, ExtractAttributeError> {
-    if let syn::Body::Struct(ref data) = ast.body {
-        for field in data.fields() {
+    if let syn::Data::Struct(ref data) = ast.data {
+        for field in data.fields.iter() {
             if field.ident.as_ref().expect("Field must have an identifier") != field_ident {
                 continue;
             }
 
             for attr in &field.attrs {
-                if attr.name() != attr_ident {
-                    continue;
-                }
-
-                if let syn::MetaItem::NameValue(_, ref lit) = attr.value {
-                    return Ok(lit.clone());
+                if let syn::Meta::NameValue(name_value) = attr.meta.clone() {
+                    if let syn::Expr::Lit(lit) = name_value.value {
+                        return Ok(lit.lit.clone());
+                    }
                 } else {
                     return Err(ExtractAttributeError::AttributeNotNameValue);
                 }
@@ -73,8 +70,8 @@ fn extract_attribute_byte_str(
 ) -> Result<Vec<u8>, ExtractAttributeError> {
     let lit = extract_attribute_value(ast, field_ident, attr_ident)?;
 
-    if let syn::Lit::ByteStr(ref bytes, _) = lit {
-        return Ok(bytes.clone());
+    if let syn::Lit::ByteStr(ref bytes) = lit {
+        return Ok(bytes.value());
     }
 
     Err(ExtractAttributeError::AttributeValueWrongType)
@@ -87,17 +84,19 @@ fn extract_attribute_int(
 ) -> Result<u64, ExtractAttributeError> {
     let lit = extract_attribute_value(ast, field_ident, attr_ident)?;
 
-    if let syn::Lit::Int(value, _) = lit {
-        return Ok(value);
+    if let syn::Lit::Int(value) = lit {
+        if let Ok(value) = value.base10_parse() {
+            return Ok(value);
+        }
     }
 
     Err(ExtractAttributeError::AttributeValueWrongType)
 }
 
 #[proc_macro_derive(BuildMessage, attributes(message_type))]
-pub fn build_message(input: TokenStream) -> TokenStream {
+pub fn build_message(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let source = input.to_string();
-    let ast = syn::parse_derive_input(&source[..]).unwrap();
+    let ast = syn::parse(input).unwrap();
 
     let message_type = match extract_attribute_byte_str(&ast,"_message_type_gen","message_type") {
         Ok(bytes) => bytes,
@@ -208,7 +207,7 @@ pub fn build_message(input: TokenStream) -> TokenStream {
             }
         }
     };
-    let mut result = String::from(tokens.as_str());
+    let mut result = String::from(tokens.to_string().as_str());
 
     if is_fixt_message {
         let tokens = quote! {
@@ -228,16 +227,16 @@ pub fn build_message(input: TokenStream) -> TokenStream {
                 }
             }
         };
-        result += tokens.as_str();
+        result += tokens.to_string().as_str();
     }
 
-    result.parse().unwrap()
+    tokens.into()
 }
 
 #[proc_macro_derive(BuildField, attributes(tag))]
-pub fn build_field(input: TokenStream) -> TokenStream {
+pub fn build_field(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let source = input.to_string();
-    let ast = syn::parse_derive_input(&source[..]).unwrap();
+    let ast = syn::parse_str(&source[..]).unwrap();
 
     let tag = match extract_attribute_int(&ast, "_tag_gen", "tag") {
         Ok(bytes) => bytes,
@@ -276,5 +275,5 @@ pub fn build_field(input: TokenStream) -> TokenStream {
             }
         }
     };
-    tokens.parse().unwrap()
+    tokens.into()
 }
