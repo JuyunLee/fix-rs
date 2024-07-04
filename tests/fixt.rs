@@ -9,8 +9,6 @@
 // at your option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-#![feature(attr_literals)]
-#![feature(const_fn)]
 #![allow(non_snake_case)]
 
 ///! The following test cases are based on the tests listed in the FIXT 1.1 spec.

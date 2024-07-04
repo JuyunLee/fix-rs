@@ -9,7 +9,6 @@
 // at your option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-#![feature(attr_literals)]
 #![allow(unknown_lints)]
 
 extern crate chrono;
@@ -18,8 +17,8 @@ extern crate fix_rs;
 #[macro_use]
 extern crate fix_rs_macros;
 
-use chrono::offset::utc::UTC;
 use chrono::TimeZone;
+use chrono::Utc;
 use std::any::Any;
 use std::collections::HashMap;
 
@@ -209,7 +208,7 @@ fn simple_test() {
     assert_eq!(message.msg_seq_num, 177);
     assert_eq!(
         message.sending_time,
-        UTC.ymd(2009, 1, 7).and_hms(18, 15, 16)
+        Utc.ymd(2009, 1, 7).and_hms(18, 15, 16)
     );
     assert_eq!(message.sender_comp_id, b"SERVER".to_vec());
     assert_eq!(message.target_comp_id, b"CLIENT".to_vec());
@@ -1065,7 +1064,7 @@ fn stream_test() {
         assert_eq!(casted_message.msg_seq_num, 177);
         assert_eq!(
             casted_message.sending_time,
-            UTC.ymd(2009, 1, 7).and_hms(18, 15, 16)
+            Utc.ymd(2009, 1, 7).and_hms(18, 15, 16)
         );
         assert_eq!(casted_message.encrypt_method, EncryptMethod::None);
         assert_eq!(casted_message.heart_bt_int, 30);
@@ -1094,7 +1093,7 @@ fn stream_test() {
     assert_eq!(casted_message.msg_seq_num, 177);
     assert_eq!(
         casted_message.sending_time,
-        UTC.ymd(2009, 1, 7).and_hms(18, 15, 16)
+        Utc.ymd(2009, 1, 7).and_hms(18, 15, 16)
     );
     assert_eq!(casted_message.encrypt_method, EncryptMethod::None);
     assert_eq!(casted_message.heart_bt_int, 30);
@@ -1118,7 +1117,7 @@ fn stream_test() {
         assert_eq!(casted_message.msg_seq_num, 177);
         assert_eq!(
             casted_message.sending_time,
-            UTC.ymd(2009, 1, 7).and_hms(18, 15, 16)
+            Utc.ymd(2009, 1, 7).and_hms(18, 15, 16)
         );
         assert_eq!(casted_message.encrypt_method, EncryptMethod::None);
         assert_eq!(casted_message.heart_bt_int, 30);
@@ -1158,7 +1157,7 @@ fn stream_test() {
     assert_eq!(casted_message.msg_seq_num, 177);
     assert_eq!(
         casted_message.sending_time,
-        UTC.ymd(2009, 1, 7).and_hms(18, 15, 16)
+        Utc.ymd(2009, 1, 7).and_hms(18, 15, 16)
     );
     assert_eq!(casted_message.encrypt_method, EncryptMethod::None);
     assert_eq!(casted_message.heart_bt_int, 30);
