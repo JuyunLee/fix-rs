@@ -24,7 +24,7 @@ macro_rules! define_dictionary {
             let mut message_dictionary: std::collections::HashMap<&'static [u8],Box<dyn $crate::fixt::message::BuildFIXTMessage + Send>> = std::collections::HashMap::new();
             use $crate::fixt::message::FIXTMessageBuildable;
             $(
-            let builder: Box<$crate::fixt::message::BuildFIXTMessage + Send> = <$msg as Default>::default().builder();
+            let builder: Box<dyn $crate::fixt::message::BuildFIXTMessage + Send> = <dyn FIXTMessageBuildable>::builder(&<$msg as Default>::default());
             message_dictionary.insert(<$msg as $crate::message::MessageDetails>::msg_type(),builder);
             )*
 
