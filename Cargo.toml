@@ -12,7 +12,7 @@ categories = ["network-programming", ]
 license = "MIT/Apache-2.0"
 
 [features]
-default = []
+default = ["clap"]
 load-testing = ["clap"]
 
 [dependencies]
@@ -22,7 +22,7 @@ chrono = "0.4.38"
 time = "0.1"
 phf = "0.7.21"
 phf_macros = "0.7.21"
-clap = { version = "~2.23.3", optional = true }
+clap = { version = "4.5.8", optional = true }
 
 [[bin]]
 name="fix-rs-lt"

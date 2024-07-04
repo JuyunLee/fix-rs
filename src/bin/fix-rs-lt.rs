@@ -9,8 +9,6 @@
 // at your option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-#![feature(attr_literals)]
-
 extern crate clap;
 #[macro_use]
 extern crate fix_rs;
@@ -18,7 +16,7 @@ extern crate fix_rs;
 extern crate fix_rs_macros;
 extern crate mio;
 
-use clap::{App, Arg};
+use clap::builder::{Arg, Command, PossibleValue};
 use mio::tcp::TcpStream;
 use mio::unix::UnixReady;
 use mio::{Events, Poll, PollOpt, Ready, Token};
@@ -45,7 +43,9 @@ use fix_rs::fix::Parser;
 use fix_rs::fix_version::FIXVersion;
 use fix_rs::fixt;
 use fix_rs::fixt::message::{BuildFIXTMessage, FIXTMessage};
-use fix_rs::message::{self, Message, SetValueError, NOT_REQUIRED, REQUIRED};
+use fix_rs::message::{
+    self, BuildMessage, Message, MessageBuildable, SetValueError, NOT_REQUIRED, REQUIRED,
+};
 use fix_rs::message_version::{self, MessageVersion};
 
 const SEND_MESSAGE_TIMEOUT_SECS: u64 = 10;
@@ -97,7 +97,7 @@ define_message!(Heartbeat: b"0" => {
 });
 
 impl FIXTMessage for Heartbeat {
-    fn new_into_box(&self) -> Box<FIXTMessage + Send> {
+    fn new_into_box(&self) -> Box<dyn FIXTMessage + Send> {
         Box::new(Heartbeat::new())
     }
 
@@ -163,7 +163,7 @@ define_message!(TestRequest: b"1" => {
 });
 
 impl FIXTMessage for TestRequest {
-    fn new_into_box(&self) -> Box<FIXTMessage + Send> {
+    fn new_into_box(&self) -> Box<dyn FIXTMessage + Send> {
         Box::new(TestRequest::new())
     }
 
@@ -257,7 +257,7 @@ struct Connection {
 
 impl Connection {
     pub fn connect_and_logon(
-        message_dictionary: HashMap<&'static [u8], Box<BuildFIXTMessage + Send>>,
+        message_dictionary: HashMap<&'static [u8], Box<dyn BuildFIXTMessage + Send>>,
     ) -> Result<Connection, io::Error> {
         //Connect to server.
         let addr = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 7001));
@@ -394,7 +394,7 @@ impl Connection {
         }
     }
 
-    pub fn recv_fixt_message(&mut self) -> Result<Box<FIXTMessage + Send>, io::Error> {
+    pub fn recv_fixt_message(&mut self) -> Result<Box<dyn FIXTMessage + Send>, io::Error> {
         if !self.parser.messages.is_empty() {
             return Ok(self.parser.messages.remove(0));
         }
@@ -435,7 +435,7 @@ impl Connection {
     }
 
     fn recv_message<T: FIXTMessage + Any + Clone>(&mut self) -> Result<T, io::Error> {
-        let fixt_message = self.recv_fixt_message())?
+        let fixt_message = self.recv_fixt_message()?;
         Ok(fixt_message
             .as_any()
             .downcast_ref::<T>()
@@ -445,7 +445,7 @@ impl Connection {
 
     pub fn recv_all_messages<F>(&mut self, mut received_message_func: F) -> Result<(), io::Error>
     where
-        F: FnMut(&Box<FIXTMessage + Send>),
+        F: FnMut(&Box<dyn FIXTMessage + Send>),
     {
         loop {
             match self.inbound_buffer.clear_and_read(&mut self.stream) {
@@ -644,17 +644,14 @@ fn test_request_latency() -> Result<(), io::Error> {
 }
 
 fn main() {
-    let matches = App::new("fix-rs-lt")
+    let matches = Command::new("fix-rs-lt")
         .version(env!("CARGO_PKG_VERSION"))
         .author(env!("CARGO_PKG_AUTHORS"))
         .about("Load/Latency testing tool for fix-rs")
-        .arg(
-            Arg::with_name("type")
-                .required(true)
-                .index(1)
-                .takes_value(true)
-                .possible_values(&["test_request_load", "test_request_latency"]),
-        )
+        .arg(Arg::new("type").required(true).index(1).value_parser([
+            PossibleValue::new("test_request_load"),
+            PossibleValue::new("test_request_latency"),
+        ]))
         .get_matches();
 
     //TODO: Make message count adjustable.
@@ -663,9 +660,9 @@ fn main() {
     //TODO: Make server address adjustable.
     //TODO: Make sender_comp_id and target_comp_id adjustable.
 
-    let result = match matches.value_of("type").unwrap() {
-        "test_request_load" => test_request_load(),
-        "test_request_latency" => test_request_latency(),
+    let result = match matches.get_one("type").unwrap() {
+        Some("test_request_load") => test_request_load(),
+        Some("test_request_latency") => test_request_latency(),
         _ => panic!("Not a supported type"),
     };
 
