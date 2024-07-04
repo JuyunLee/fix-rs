@@ -660,9 +660,9 @@ fn main() {
     //TODO: Make server address adjustable.
     //TODO: Make sender_comp_id and target_comp_id adjustable.
 
-    let result = match matches.get_one("type").unwrap() {
-        Some("test_request_load") => test_request_load(),
-        Some("test_request_latency") => test_request_latency(),
+    let result = match matches.get_one::<String>("type").unwrap().as_str() {
+        "test_request_load" => test_request_load(),
+        "test_request_latency" => test_request_latency(),
         _ => panic!("Not a supported type"),
     };
 
