@@ -207,7 +207,7 @@ pub fn build_message(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
             }
         }
     };
-    let mut result = String::from(tokens.to_string().as_str());
+    let mut result = tokens;
 
     if is_fixt_message {
         let tokens = quote! {
@@ -227,10 +227,10 @@ pub fn build_message(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
                 }
             }
         };
-        result += tokens.to_string().as_str();
+        result.extend(tokens);
     }
 
-    tokens.into()
+    result.into()
 }
 
 #[proc_macro_derive(BuildField, attributes(tag))]
